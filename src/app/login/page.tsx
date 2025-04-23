@@ -14,6 +14,7 @@ export default function LoginPage() {
         emailRedirectTo: `${window.location.origin}/auth/callback`
     } });
     if (error) {
+      console.error(error);
       setMessage(error.message);
     } else {
       setMessage('Check your email for a login link.');

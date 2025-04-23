@@ -1,11 +1,6 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/requireAuth';
 
 export default async function ProtectedPage() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    redirect('/login');
-  }
-  return <div className="p-8">Welcome, {data.user.email}!</div>;
+  const user = await requireAuth();
+  return <div className="p-8">Welcome, {user.email}!</div>;
 } 
