@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import AssetCard from '@/components/AssetCard';
 
 interface Upload {
   id: string;
@@ -86,21 +86,13 @@ export default function NewPage() {
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Latest Uploads</h1>
         <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-6 space-y-6">
           {uploads.map((upload) => (
-            <Link key={upload.id} href={`/assets/${upload.id}`}>  
-              <div className="mb-6 break-inside-avoid overflow-hidden rounded-xl bg-white shadow hover:shadow-xl transition-shadow">
-                <Image
-                  src={upload.fileUrl}
-                  alt={upload.title || 'Image'}
-                  width={400}
-                  height={300}
-                  className="w-full h-auto object-cover"
-                />
-                <div className="p-2">
-                  {upload.title && <h2 className="text-sm font-medium text-gray-800 mb-1 truncate">{upload.title}</h2>}
-                  <p className="text-xs text-gray-500">{new Date(upload.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
-            </Link>
+            <AssetCard
+              key={upload.id}
+              id={upload.id}
+              fileUrl={upload.fileUrl}
+              title={upload.title}
+              createdAt={upload.createdAt}
+            />
           ))}
         </div>
         {/* Load More button */}

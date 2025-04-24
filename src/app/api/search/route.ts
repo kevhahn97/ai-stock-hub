@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
   const assetMap = new Map(assets.map((a) => [a.id, a]))
   const results = sortedIds
     .map((id) => assetMap.get(id))
-    .filter((a): a is { id: string; fileUrl: string; title?: string; created_at?: Date } => !!a)
+    .filter((a): a is { id: string; fileUrl: string; title: string; created_at: Date } => !!a)
     .map((a) => {
       const { data } = supabase.storage.from('images').getPublicUrl(a.fileUrl)
       return { id: a.id, fileUrl: data.publicUrl, title: a.title, createdAt: a.created_at?.toISOString() }

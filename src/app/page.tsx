@@ -1,21 +1,23 @@
 import Link from 'next/link';
 import { FiSearch, FiLogIn, FiLogOut, FiUpload, FiGrid } from 'react-icons/fi';
 import { createClient } from '@/lib/supabase/server';
+import Recommended from '@/components/Recommended';
+import Recents from '@/components/Recents';
 
-const images = [
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1519985176271-adb1088fa94c?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-];
+// const images = [
+//   'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1519985176271-adb1088fa94c?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
+//   'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
+// ];
 
 const tags = [
-  'technology', 'nature', 'business', 'workspace', 'lifestyle', 'travel', 'food',
+  'cat', 'dog', 'nature', 'stars', 'outer space', 'history', 'food',
 ];
 
 function getInitials(name: string | null | undefined, email: string | null | undefined) {
@@ -50,7 +52,6 @@ export default async function Home() {
           ))}
         </nav>
         <div className="flex items-center gap-4">
-          <button className="p-2 rounded-full hover:bg-neutral-100"><FiSearch size={20} /></button>
           {!user ? (
             <Link href="/login" className="flex items-center gap-1 text-neutral-700 hover:text-blue-600 font-medium"><FiLogIn size={18} /> Sign In</Link>
           ) : (
@@ -76,7 +77,7 @@ export default async function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center text-center py-28 px-4 animate-fade-in">
+      <section className="flex flex-col items-center justify-center text-center py-28 px-4 animate-fade-in pb-16">
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-neutral-900 mb-8 leading-tight max-w-4xl tracking-tight">Stunning images for your <br className="hidden sm:inline" />next project</h1>
         <p className="text-lg text-neutral-500 mb-10 max-w-xl">Discover and download high-quality stock photos that inspire creativity</p>
         <form action="/search" method="get" className="flex w-full max-w-xl mx-auto mb-5">
@@ -93,24 +94,28 @@ export default async function Home() {
         </form>
         <div className="flex flex-wrap justify-center gap-3 mt-2">
           {tags.map(tag => (
-            <button
+            <Link
               key={tag}
+              href={`/search?q=${encodeURIComponent(tag)}`}
               className="bg-white border border-neutral-200 shadow-sm text-neutral-700 rounded-full px-5 py-1.5 text-sm font-medium hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
               style={{ boxShadow: '0 1px 4px 0 rgba(0,0,0,0.03)' }}
             >
               {tag}
-            </button>
+            </Link>
           ))}
         </div>
-        {user && (
+        {/* {user && (
           <div className="mt-8">
             <Link href="/dashboard" className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition-colors">Go to Dashboard</Link>
           </div>
-        )}
+        )} */}
       </section>
 
+      {/* Asynchronous Recommendation Component */}
       {/* Featured Images Section */}
-      <section id="explore" className="max-w-6xl mx-auto px-4 py-12">
+      {user ? <Recommended />: <Recents />}
+
+      {/* <section id="explore" className="max-w-6xl mx-auto px-4 py-12">
         <h2 className="text-2xl font-bold text-neutral-900 mb-2">Free stock photos for everyone</h2>
         <p className="text-neutral-500 mb-8">Browse our curated collection of stunning images</p>
         <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4">
@@ -131,7 +136,7 @@ export default async function Home() {
         <div className="mt-12 text-center text-neutral-400 text-xs">
           &copy; {new Date().getFullYear()} AI Stock Hub. All rights reserved.
         </div>
-      </section>
+      </section>} */}
       <style>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(24px); }

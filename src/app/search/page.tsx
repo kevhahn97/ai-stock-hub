@@ -1,8 +1,15 @@
 "use client";
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import AssetCard from '@/components/AssetCard';
+
+interface Asset {
+  id: string;
+  fileUrl: string;
+  title?: string;
+  createdAt?: string;
+}
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -39,29 +46,32 @@ export default function SearchPage() {
       </header>
 
       <section className="max-w-7xl mx-auto px-4 py-8">
+        {/* Search bar for new queries */}
+        <form action="/search" method="get" className="flex w-full max-w-xl mx-auto mb-8">
+          <div className="flex flex-1 items-center bg-white border border-neutral-200 rounded-l-full px-5 py-3 shadow focus-within:ring-2 focus-within:ring-blue-200">
+            <input
+              name="q"
+              type="text"
+              defaultValue={q}
+              placeholder="Search for free high-resolution photos"
+              className="flex-1 bg-transparent outline-none text-neutral-900 placeholder-neutral-400 text-lg"
+            />
+          </div>
+          <button type="submit" className="bg-neutral-900 text-white px-8 py-3 rounded-r-full font-semibold text-lg hover:bg-blue-700 transition-colors">Search</button>
+        </form>
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Search results for “{q}”</h1>
         {loading ? (
           <p className="text-gray-500 text-center mt-8">Loading...</p>
         ) : (
           <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-6 space-y-6">
-            {assets.map((asset) => (
-              <Link key={asset.id} href={`/assets/${asset.id}`}>  
-                <div className="mb-6 break-inside-avoid overflow-hidden rounded-xl bg-white shadow hover:shadow-xl transition-shadow">
-                  <Image
-                    src={asset.fileUrl}
-                    alt={asset.title || 'Image'}
-                    width={400}
-                    height={300}
-                    className="w-full h-auto object-cover"
-                  />
-                  <div className="p-2">
-                    {asset.title && <h2 className="text-sm font-medium text-gray-800 mb-1 truncate">{asset.title}</h2>}
-                    {asset.createdAt && (
-                      <p className="text-xs text-gray-500">{new Date(asset.createdAt).toLocaleDateString()}</p>
-                    )}
-                  </div>
-                </div>
-              </Link>
+            {(assets as Asset[]).map((asset) => (
+              <AssetCard
+                key={asset.id}
+                id={asset.id}
+                fileUrl={asset.fileUrl}
+                title={asset.title}
+                createdAt={asset.createdAt}
+              />
             ))}
           </div>
         )}

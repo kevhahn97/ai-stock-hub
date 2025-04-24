@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'next/navigation';
 
 const MAX_SIZE_MB = 100;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -23,6 +24,7 @@ export default function UploadPage() {
   const [success, setSuccess] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+  const router = useRouter();
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -118,6 +120,8 @@ export default function UploadPage() {
       setModel('');
       setLicence(LICENCES[0].value);
       setPreviewUrl(null);
+      // Redirect to asset page
+      router.push(`/assets/${uploadId}`);
     } catch (err) {
       console.error(err);
       setError((err as Error).message || 'Upload failed.');

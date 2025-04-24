@@ -22,9 +22,27 @@ export default async function AssetPage({ params }: { params: { id: string } }) 
   });
   if (!asset) notFound();
 
-  // Get public URL with resizing
+  // Record recent view (up to last 5)
   const supabase = await createClient();
-  const { data } = supabase.storage.from('images').getPublicUrl(asset.fileUrl);
+  const { data: sessionData } = await supabase.auth.getUser();
+  const user = sessionData?.user;
+  if (user) {
+    await prisma.recentView.create({ data: { userId: user.id, uploadId: asset.id } });
+    const old = await prisma.recentView.findMany({
+      where: { userId: user.id },
+      orderBy: { viewed_at: 'desc' },
+      skip: 5,
+      select: { id: true },
+    });
+    if (old.length) {
+      const ids = old.map((v) => v.id);
+      await prisma.recentView.deleteMany({ where: { id: { in: ids } } });
+    }
+  }
+
+  // Get public URL with resizing
+  const supabaseStorage = supabase;
+  const { data } = supabaseStorage.storage.from('images').getPublicUrl(asset.fileUrl);
   const publicUrl = `${data.publicUrl}`;
 
   return (
