@@ -1,7 +1,8 @@
 import * as path from 'path';
-import { createClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
 import { v4 as uuid } from 'uuid';
+import { S3Client, ListObjectsV2Command, GetObjectCommand, CopyObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 
 // const DIRECTORIES = [
 //   "2024/10/1",
@@ -187,10 +188,25 @@ const SOURCE_BASE_DIR = 'generated-images';
 const IMAGES_BUCKET_NAME = 'images'
 const OPENAI_API_KEY = process.env.OPENAI_KEY || '';
 
-// Supabase 클라이언트 초기화
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Ensure AWS credentials are properly handled
+const accessKeyId = process.env.SUPABASE_ACCESS_KEY;
+const secretAccessKey = process.env.SUPABASE_SECRET_KEY;
+const region = 'ap-northeast-2';
+
+if (!accessKeyId || !secretAccessKey) {
+  throw new Error('AWS credentials are not set in environment variables.');
+}
+
+// AWS S3 클라이언트
+const s3Client = new S3Client({
+  region,
+  endpoint: 'https://mgipxkgfgfukuqxzihyo.supabase.co/storage/v1/s3',
+  forcePathStyle: true, // renamed from s3ForcePathStyle
+  credentials: {
+    accessKeyId,
+    secretAccessKey,
+  }
+});
 
 
 enum ImageModel {
@@ -268,61 +284,54 @@ function isImageFile(filePath: string): boolean {
   return imageExtensions.includes(ext);
 }
 
-// Supabase Storage에서 특정 디렉토리의 이미지 파일 리스트 가져오기
+// AWS S3에서 특정 디렉토리의 이미지 파일 리스트 가져오기
 async function findImagesInDirectory(directory: string): Promise<string[]> {
   const prefix = `${SOURCE_BASE_DIR}/${directory}/`;
   const imageFiles: string[] = [];
 
-  console.log(`Supabase Storage 디렉토리 검색 중: ${prefix}`);
+  console.log(`AWS S3 디렉토리 검색 중: ${prefix}`);
 
-  let startAfter = '';
+  let continuationToken: string | undefined;
   let hasMore = true;
 
   while (hasMore) {
     try {
-      // Supabase Storage API를 사용하여 객체 리스트 가져오기
-      const { data, error } = await supabase
-        .storage
-        .from(SOURCE_BUCKET_NAME)
-        .list(prefix, {
-          limit: 1000,
-          offset: startAfter ? 1 : 0,
-          sortBy: { column: 'name', order: 'asc' }
-        });
+      // AWS S3 API를 사용하여 객체 리스트 가져오기
+      const params = {
+        Bucket: SOURCE_BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      };
+      const data = await s3Client.send(new ListObjectsV2Command(params));
 
-      if (error) {
-        console.error(`Storage 객체 리스트 가져오기 오류:`, error);
-        break;
-      }
-
-      if (!data || data.length === 0) {
+      if (!data.Contents || data.Contents.length === 0) {
         hasMore = false;
         break;
       }
 
       // 마지막 항목 저장하여 다음 페이지에서 사용
-      startAfter = data[data.length - 1].name;
+      continuationToken = data.NextContinuationToken;
 
       // 파일만 필터링하고 이미지 파일만 선택
-      for (const item of data) {
-        if (!item.id.endsWith('/') && isImageFile(item.name)) {
-          imageFiles.push(`${prefix}${item.name}`);
+      for (const item of data.Contents) {
+        if (item.Key && !item.Key.endsWith('/') && isImageFile(item.Key)) {
+          imageFiles.push(item.Key);
         }
       }
 
       // 다음 페이지가 없으면 종료
-      if (data.length < 1000) {
+      if (!data.IsTruncated) {
         hasMore = false;
       }
     } catch (error) {
-      console.error(`Supabase Storage 조회 오류:`, error);
+      console.error(`AWS S3 조회 오류:`, error);
       break;
     }
   }
   return imageFiles;
 }
 
-// Supabase Storage에서 이미지 다운로드하여 base64로 변환
+// AWS S3에서 이미지 다운로드하여 base64로 변환
 async function downloadImageFromStorage(path: string): Promise<{ base64: string, mimeType: string }> {
   try {
     // 경로에서 버킷 이름 제거
@@ -330,23 +339,27 @@ async function downloadImageFromStorage(path: string): Promise<{ base64: string,
       ? path.substring(SOURCE_BUCKET_NAME.length + 1)
       : path;
 
-    // Supabase에서 파일 다운로드
-    const { data, error } = await supabase
-      .storage
-      .from(SOURCE_BUCKET_NAME)
-      .download(storagePath);
+    // AWS S3에서 파일 다운로드
+    const params = {
+      Bucket: SOURCE_BUCKET_NAME,
+      Key: storagePath,
+    };
+    const data = await s3Client.send(new GetObjectCommand(params));
 
-    if (error) {
-      throw error;
-    }
-
-    if (!data) {
+    if (!data.Body) {
       throw new Error(`이미지를 다운로드할 수 없습니다: ${path}`);
     }
 
-    // ArrayBuffer를 base64로 변환
-    const buffer = await data.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
+    // 스트림을 Buffer로 변환
+    const streamBody = data.Body as Readable;
+    const chunks: Buffer[] = [];
+
+    for await (const chunk of streamBody) {
+      chunks.push(Buffer.from(chunk));
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const base64 = buffer.toString('base64');
     const mimeType = getMimeTypeFromPath(path);
 
     return {
@@ -354,7 +367,7 @@ async function downloadImageFromStorage(path: string): Promise<{ base64: string,
       mimeType
     };
   } catch (error) {
-    console.error(`Supabase Storage에서 이미지 다운로드 오류: ${path}`, error);
+    console.error(`AWS S3에서 이미지 다운로드 오류: ${path}`, error);
     throw error;
   }
 }
@@ -430,13 +443,21 @@ async function analyzeImageWithOpenAI(base64Image: string, mimeType: string, ima
   }
 }
 
-// Function to copy image to 'images' bucket and get public URL
+// Function to copy image to AWS S3 'images' bucket and get public URL
 async function copyImageToBucket(sourcePath: string, targetPath: string): Promise<void> {
-  const { error: copyError } = await supabase.storage.from(SOURCE_BUCKET_NAME).copy(sourcePath, targetPath, {
-    destinationBucket: IMAGES_BUCKET_NAME
-  });
-  if (copyError) {
-    throw new Error(`Failed to copy image to 'images' bucket: \n ${copyError.message} \n${copyError.name} \n${copyError.stack} \n${copyError.cause}`);
+  try {
+    const copyParams = {
+      Bucket: IMAGES_BUCKET_NAME,
+      CopySource: `${SOURCE_BUCKET_NAME}/${sourcePath}`,
+      Key: targetPath,
+    };
+    await s3Client.send(new CopyObjectCommand(copyParams));
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error(`Failed to copy image to 'images' bucket:`, error);
+      throw new Error(`Failed to copy image to 'images' bucket: \n ${error.message}`);
+    }
+    throw error;
   }
 }
 
@@ -475,7 +496,7 @@ async function fallbackDeleteUpload(id: string) {
         id
       },
     })
-  } catch (error) {
+  } catch (error: unknown) {
     // do nothing
   }
 }
@@ -514,9 +535,9 @@ async function processImagesInChunks(images: string[], chunkSize: number, dateDi
 
 // Update main function to use processImagesInChunks
 async function main() {
-  // Supabase URL과 API 키 확인
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('오류: Supabase URL 또는 API 키가 설정되지 않았습니다.');
+  // AWS credentials 확인
+  if (!accessKeyId || !secretAccessKey) {
+    console.error('오류: AWS 자격 증명이 설정되지 않았습니다.');
     process.exit(1);
   }
 
@@ -524,7 +545,7 @@ async function main() {
 
   // 각 지정된 디렉토리 처리
   for (const directory of directories) {
-    // Supabase Storage 디렉토리에서 이미지 파일 찾기
+    // AWS S3 디렉토리에서 이미지 파일 찾기
     const images = await findImagesInDirectory(directory);
 
     if (images.length === 0) {
