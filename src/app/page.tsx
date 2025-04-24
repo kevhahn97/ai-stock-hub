@@ -34,15 +34,16 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Navbar */}
-      <header className="w-full px-8 py-5 flex items-center justify-between bg-white/80 backdrop-blur border-b border-neutral-100 sticky top-0 z-10">
-        <span className="text-2xl font-black tracking-tight text-blue-700 select-none">AI Stock Hub</span>
-        <nav className="hidden md:flex gap-10 text-base font-medium text-neutral-700 items-center">
-          {['Home', 'Explore', 'New'].map((item) => (
+      <header className="w-full px-8 py-5 flex items-center justify-between bg-white border-b border-neutral-100 sticky top-0 z-10">
+        <Link href="/" className="text-2xl font-black tracking-tight text-blue-700 select-none">
+          AI Stock Hub
+        </Link>
+        <nav className="hidden md:flex gap-8 text-base font-medium text-neutral-800 items-center">
+          {['Home', 'New'].map((item) => (
             <Link
               key={item}
-              href={item === 'Home' ? '/' : `#${item.toLowerCase()}`}
-              className="relative px-1 hover:text-blue-600 transition-colors after:content-[''] after:block after:h-0.5 after:bg-blue-600 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left after:duration-200"
-              style={{ transition: 'color 0.2s' }}
+              href={item === 'Home' ? '/' : `/new`}
+              className="relative px-2 hover:text-blue-600 transition-colors"
             >
               {item}
             </Link>
