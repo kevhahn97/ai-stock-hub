@@ -32,6 +32,8 @@ model upload {
   fileUrl   String
   llm_keywords String[] // LLM-generated keywords
   llm_description String? // LLM-generated description
+  image_embedding Decimal[] // Image embedding vector
+  desc_embedding Decimal[] // Description embedding vector
   downloads download[]
   created_at DateTime   @default(now())
 }

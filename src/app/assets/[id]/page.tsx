@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import BackButton from './BackButton';
 
 export default async function AssetPage({ params }: { params: { id: string } }) {
   const asset = await prisma.upload.findUnique({
@@ -40,9 +41,7 @@ export default async function AssetPage({ params }: { params: { id: string } }) 
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-12">
-        <Link href="/new" className="text-blue-600 hover:underline mb-8 inline-block text-sm font-medium">
-          &larr; Back to New Uploads
-        </Link>
+        <BackButton />
         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
           {/* Image */}
           <div className="rounded-2xl overflow-hidden shadow-lg bg-white flex items-center justify-center p-2">
@@ -69,12 +68,6 @@ export default async function AssetPage({ params }: { params: { id: string } }) 
               <div className="text-xs font-semibold text-neutral-400 mb-1">Prompt:</div>
               <div className="text-neutral-700 text-base mb-4">{asset.prompt}</div>
             </div>
-            {asset.llm_description && (
-              <div>
-                <div className="text-xs font-semibold text-neutral-400 mb-1">Description:</div>
-                <div className="text-neutral-700 text-base mb-4 leading-relaxed">{asset.llm_description}</div>
-              </div>
-            )}
             {asset.llm_keywords && asset.llm_keywords.length > 0 && (
               <div>
                 <div className="text-xs font-semibold text-neutral-400 mb-1">Keywords:</div>

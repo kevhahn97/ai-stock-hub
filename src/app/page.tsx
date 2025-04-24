@@ -79,10 +79,11 @@ export default async function Home() {
       <section className="flex flex-col items-center justify-center text-center py-28 px-4 animate-fade-in">
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-neutral-900 mb-8 leading-tight max-w-4xl tracking-tight">Stunning images for your <br className="hidden sm:inline" />next project</h1>
         <p className="text-lg text-neutral-500 mb-10 max-w-xl">Discover and download high-quality stock photos that inspire creativity</p>
-        <form className="flex w-full max-w-xl mx-auto mb-5">
+        <form action="/search" method="get" className="flex w-full max-w-xl mx-auto mb-5">
           <div className="flex flex-1 items-center bg-white border border-neutral-200 rounded-l-full px-5 py-3 shadow focus-within:ring-2 focus-within:ring-blue-200">
             <FiSearch className="text-neutral-400 mr-2" size={22} />
             <input
+              name="q"
               type="text"
               placeholder="Search for free high-resolution photos"
               className="flex-1 bg-transparent outline-none text-neutral-900 placeholder-neutral-400 text-lg"

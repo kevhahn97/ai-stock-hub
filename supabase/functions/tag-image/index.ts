@@ -45,11 +45,11 @@ Deno.serve(async (req) => {
     const { keywords, description } = await getTagsAndDescription(signedUrl)
 
     // 3. Run DB update and embeddings in parallel
-    const [imageEmb, descEmb, updateResult] = await Promise.all([
+    const [imageEmb, descEmb] = await Promise.all([
       getJinaImageEmbedding(signedUrl),
       getOpenAITextEmbedding(description),
-      updateUploadRecord(fileName, keywords, description),
     ])
+    const updateResult = await updateUploadRecord(fileName, keywords, description, imageEmb, descEmb)
 
     if (updateResult.error) {
       console.error('Failed to update upload record', updateResult.error)
@@ -127,8 +127,17 @@ Respond ONLY with valid JSON adhering to the JSON schema:
 }
 
 // Helper to update Supabase upload record
-async function updateUploadRecord(fileUrl: string, keywords: string[], description: string) {
-  return supabase.from('upload').update({ llm_keywords: keywords, llm_description: description }).eq('fileUrl', fileUrl)
+async function updateUploadRecord(
+  fileUrl: string,
+  keywords: string[],
+  description: string,
+  image_embedding: number[],
+  desc_embedding: number[],
+) {
+  return supabase
+    .from('upload')
+    .update({ llm_keywords: keywords, llm_description: description, image_embedding, desc_embedding })
+    .eq('fileUrl', fileUrl)
 }
 
 // Helper to get image embedding from Jina
