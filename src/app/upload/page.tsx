@@ -117,6 +117,7 @@ export default function UploadPage() {
       setPrompt('');
       setModel('');
       setLicence(LICENCES[0].value);
+      setPreviewUrl(null);
     } catch (err) {
       console.error(err);
       setError((err as Error).message || 'Upload failed.');

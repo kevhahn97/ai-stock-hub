@@ -9,6 +9,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model user {
@@ -29,6 +30,8 @@ model upload {
   modelName String
   licence   String // e.g. CC0, Non‑commercial
   fileUrl   String
+  llm_keywords String[] // LLM-generated keywords
+  llm_description String? // LLM-generated description
   downloads download[]
   created_at DateTime   @default(now())
 }
