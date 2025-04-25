@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import AssetCard from '@/components/AssetCard';
+import { Suspense } from "react";
 
 interface Asset {
   id: string;
@@ -11,7 +12,7 @@ interface Asset {
   createdAt?: string;
 }
 
-export default function SearchPage() {
+function SearchPage() {
   const searchParams = useSearchParams();
   const q = searchParams.get('q') ?? '';
 
@@ -81,4 +82,14 @@ export default function SearchPage() {
       </section>
     </div>
   );
-} 
+}
+
+function SearchPageWithSuspense() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>}>
+      <SearchPage />
+    </Suspense>
+  );
+}
+
+export default SearchPageWithSuspense; 
