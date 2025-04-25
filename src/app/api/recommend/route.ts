@@ -37,28 +37,39 @@ export async function GET() {
   const user = sessionData?.user
   if (!user) return NextResponse.json([])
 
-  // Get recent 5 views
+  const desiredCount = 20
+  // Get recent 10 views
   const recViews = await prisma.recentView.findMany({
     where: { userId: user.id },
     orderBy: { viewed_at: 'desc' },
     select: { uploadId: true },
-    take: 5,
+    take: 10,
   })
   if (recViews.length === 0) {
+    console.log('No recent views, returning 20 most recent uploads as popular items')
     // No recent views, return 20 most recent uploads as popular items
     const results = await getRecentUploads(supabase, 20)
     return NextResponse.json(results)
   }
 
-  const matchScores = new Map<string, number>()
-  const recCount = recViews.length
+  // Mix results properly to guarantee each recent view contributes
+  const perViewMatches: string[][] = []
+  let numUploadsWithEmbeds = 0
+  const maxQueries = 3
   for (const { uploadId } of recViews) {
+    if (numUploadsWithEmbeds >= maxQueries) break
     // Fetch embeddings from DB
     const upload = await prisma.upload.findUnique({
       where: { id: uploadId },
       select: { desc_embedding: true, image_embedding: true },
     })
     if (!upload) continue
+    if (upload.desc_embedding.length === 0 || upload.image_embedding.length === 0) {
+      console.log('Upload found, but no embeddings', uploadId)
+      continue
+    }
+    numUploadsWithEmbeds++
+    console.log('Upload found, querying Pinecone', uploadId)
     // convert Decimal[] to number[]
     const descVec = upload.desc_embedding.map((d) => Number(d))
     const imgVec = upload.image_embedding.map((d) => Number(d))
@@ -66,20 +77,40 @@ export async function GET() {
       queryPinecone(PINECONE_DESC_HOST, descVec, 10),
       queryPinecone(PINECONE_IMAGE_HOST, imgVec, 10),
     ])
-    const viewWeight = 1 / recCount
+    // Combine desc and image scores per match
+    const viewScoreMap = new Map<string, number>()
     for (const m of descMatches) {
-      matchScores.set(m.id, (matchScores.get(m.id) || 0) + m.score * viewWeight * 0.5)
+      viewScoreMap.set(m.id, (viewScoreMap.get(m.id) || 0) + m.score * 0.5)
     }
     for (const m of imgMatches) {
-      matchScores.set(m.id, (matchScores.get(m.id) || 0) + m.score * viewWeight * 0.5)
+      viewScoreMap.set(m.id, (viewScoreMap.get(m.id) || 0) + m.score * 0.5)
     }
+    // Sort matches for this view
+    const sortedViewIds = Array.from(viewScoreMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id)
+    perViewMatches.push(sortedViewIds)
   }
 
-  // Sort and limit to 20
-  const sortedIds = Array.from(matchScores.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([id]) => id)
-    .slice(0, 20)
+  // Interleave matches from each view to mix contributions
+  const finalIds: string[] = []
+  const seen = new Set<string>()
+  for (let rank = 0; finalIds.length < desiredCount; rank++) {
+    let addedInRound = false
+    for (const viewIds of perViewMatches) {
+      if (rank < viewIds.length) {
+        const id = viewIds[rank]
+        if (!seen.has(id)) {
+          seen.add(id)
+          finalIds.push(id)
+          addedInRound = true
+          if (finalIds.length >= desiredCount) break
+        }
+      }
+    }
+    if (!addedInRound) break
+  }
+  const sortedIds = finalIds
 
   // Fetch metadata
   const assets = await prisma.upload.findMany({
