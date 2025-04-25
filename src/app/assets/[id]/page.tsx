@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import BackButton from './BackButton';
 
-export default async function AssetPage({ params }: { params: { id: string } }) {
+export default async function AssetPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const asset = await prisma.upload.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: {
       id: true,
       fileUrl: true,

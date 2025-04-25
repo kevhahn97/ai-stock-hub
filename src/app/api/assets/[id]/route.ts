@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function GET(request: NextRequest) {
+  const { pathname } = new URL(request.url)
+  const id = pathname.split('/').pop()
+
   const asset = await prisma.upload.findUnique({
     where: { id },
     select: {
