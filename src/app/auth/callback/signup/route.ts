@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
-  console.log('Signup callback', token_hash)
   if (token_hash) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ type: 'signup', token_hash })
+    const { data, error } = await supabase.auth.verifyOtp({ type: 'signup', token_hash })
+    console.log('signup: ', data, error)
     if (!error) {
       // go to home page
       const url = new URL('/', request.url)
