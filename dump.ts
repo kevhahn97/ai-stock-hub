@@ -186,7 +186,7 @@ import { Readable } from 'stream';
 const SOURCE_BUCKET_NAME = 'shortdoridump';
 const SOURCE_BASE_DIR = 'generated-images';
 const IMAGES_BUCKET_NAME = 'images'
-const OPENAI_API_KEY = process.env.OPENAI_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 // Ensure AWS credentials are properly handled
 const accessKeyId = process.env.SUPABASE_ACCESS_KEY;
